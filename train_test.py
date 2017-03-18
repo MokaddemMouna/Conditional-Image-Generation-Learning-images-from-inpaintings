@@ -1,20 +1,32 @@
 import sys
 import os
-import time
-
 import numpy as np
+import PIL.Image as Image
+import glob
+import pickle as pkl
+from lasagne.layers import Conv2DLayer as ConvLayer
+#from lasagne.layers.dnn import Conv2DDNNLayer as ConvLayer
+from lasagne.layers import ElemwiseSumLayer
+from lasagne.layers import InputLayer
+from lasagne.layers import DenseLayer
+from lasagne.layers import GlobalPoolLayer
+from lasagne.layers import PadLayer
+from lasagne.layers import ExpressionLayer
+from lasagne.layers import NonlinearityLayer
+from lasagne.nonlinearities import softmax, rectify
+from lasagne.layers import batch_norm
+from lasagne.layers import Pool2DLayer as PoolLayer
+import time
 import theano
 import theano.tensor as T
-# import utils
 import lasagne
-import iterator
-import pickle as pkl
+
+theano.config.floatX = 'float32'
 
 
 def load_dataset(batch_size=128):
-
-    train_iter = iterator.Iterator(nb_sub=1280, batch_size=batch_size, img_path = 'train2014', extract_center=True)
-    val_iter = iterator.Iterator(nb_sub=1280, batch_size=batch_size, img_path = 'valid2014', extract_center=True)
+    train_iter = Iterator(batch_size=batch_size, img_path = 'train2014', extract_center=True)
+    val_iter = Iterator(nb_sub=1280, batch_size=batch_size, img_path = 'val2014',extract_center=True)
 
     return train_iter, val_iter
 
@@ -24,10 +36,10 @@ def load_dataset(batch_size=128):
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def train(network_fn, num_epochs=1,
-          lr=0.001, sample=3, save_freq=100,
+def train(network_fn, num_epochs=20,
+          lr=0.001, sample=19,save_freq=100,
           batch_size=128, verbose_freq=100,
-          model_file="models/testing123.npz",
+          model_file="/u/mokaddem/IFT6266/test.npz",
           reload=False,
           **kwargs):
 
@@ -40,8 +52,8 @@ def train(network_fn, num_epochs=1,
     train_loss = []
 
     # Prepare Theano variables for inputs and targets
-    input = T.tensor4('inputs')
-    target = T.tensor4('targets')
+    input = T.tensor4('inputs',dtype='float32')
+    target = T.tensor4('targets',dtype='float32')
 
     input_var = input.transpose((0, 3, 1, 2))
     target_var = target.dimshuffle((0, 3, 1, 2))
@@ -52,9 +64,9 @@ def train(network_fn, num_epochs=1,
         kwargs = options
 
     network = network_fn(input_var, **kwargs)
-    if reload:
-        print "reloading {}...".format(model_file)
-        network = utils.load_model(network, model_file)
+#     if reload:
+#         print "reloading {}...".format(model_file)
+#         network = utils.load_model(network, model_file)
 
     prediction = lasagne.layers.get_output(network)
     loss = lasagne.objectives.squared_error(prediction, target_var)
@@ -97,31 +109,34 @@ def train(network_fn, num_epochs=1,
 
             # Generate
 #             if (i+1) % verbose_freq == 0.:
-#                 utils.generate_and_show_sample(val_fn, nb=sample)
-#                 print "batch {} of epoch {} of {} took {:.3f}s".format(i, epoch + 1, num_epochs, time.time() - start_time)
-#                 print "  training loss:\t\t{:.6f}".format(train_err / train_batches)
+            print "batch {} of epoch {} of {} took {:.3f}s".format(i, epoch + 1, num_epochs, time.time() - start_time)
+            print "  training loss:\t\t{:.6f}".format(train_err / train_batches)
+            if epoch == 19:
+                generate_and_show_sample(val_fn, nb=sample, seed=i)
+                print "saving the model"
+                save_model(network, kwargs, model_file)
 
 #             if (i+1) % save_freq == 0:
-#                 print "saving the model"
-#                 utils.save_model(network, kwargs, model_file)
+                
             
-            print "  training loss:\t\t{:.6f}".format(train_err / train_batches)
+
         train_loss.append(train_err)
-
+#         plt.plot(train_batches, train_err / train_batches, 'bs')
+#         plt.show()
         # And a full pass over the validation data:
-        val_err = 0
-        val_batches = 0
+#         val_err = 0
+#         val_batches = 0
 
-        for batch in val_iter:
-           inputs, targets, caps = batch
-           err, pred = val_fn(inputs, targets)
-           val_err += err
-           val_batches += 1
+#         for batch in val_iter:
+#            inputs, targets, caps = batch
+#            err, pred = val_fn(inputs, targets)
+#            val_err += err
+#            val_batches += 1
 
-        Then we print the results for this epoch:
+# #         Then we print the results for this epoch:
 
-        print("  validation loss:\t\t{:.6f}".format(val_err / val_batches))
-
+#            print("  validation loss:\t\t{:.6f}".format(val_err / val_batches))
+        
 
 
     #import ipdb
@@ -132,5 +147,5 @@ def train(network_fn, num_epochs=1,
 
 
 if __name__ == '__main__':
-    train(build_ResNet, 1)
+    train(build_ResNet)
         
