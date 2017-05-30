@@ -52,8 +52,8 @@ def build_discriminator(input_var=None):
     
     def load_dataset(batch_size=128):
 
-    train_iter = Iterator(nb_sub=1280,batch_size=batch_size, img_path = 'train2014', extract_center=True)
-    val_iter = Iterator(nb_sub=1280, batch_size=batch_size, img_path = 'val2014',extract_center=True)
+    train_iter = iterator.Iterator(nb_sub=1280,batch_size=batch_size, img_path = 'train2014', extract_center=True)
+    val_iter = iterator.Iterator(nb_sub=1280, batch_size=batch_size, img_path = 'val2014',extract_center=True)
 
     return train_iter, val_iter
 
